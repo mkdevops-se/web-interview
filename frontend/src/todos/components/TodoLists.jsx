@@ -12,7 +12,15 @@ import ReceiptIcon from '@mui/icons-material/Receipt'
 import { TodoListForm } from './TodoListForm'
 import axios from 'axios'
 
-axios.defaults.baseURL = 'http://localhost:3001'
+const getBaseUrl = () => {
+  // FIXME(@okaziya): Hack to make the frontend work until something more beautiful comes in #9
+  if (window.location.href.startsWith('http://localhost:3000')) {
+    return 'http://localhost:3001'
+  } else {
+    return ''
+  }
+}
+axios.defaults.baseURL = getBaseUrl();
 
 export const TodoLists = ({ style }) => {
   const [todoLists, setTodoLists] = useState()
