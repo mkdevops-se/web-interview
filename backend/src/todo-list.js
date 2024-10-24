@@ -12,6 +12,10 @@ export const TodoList = new EntitySchema({
       type: String,
       nullable: false,
     },
+    completed: {
+      type: Boolean,
+      default: false,
+    },
   },
   relations: {
     items: {
