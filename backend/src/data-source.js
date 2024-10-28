@@ -20,7 +20,7 @@ export const getAppDataSource = async () => {
       location: './todo.db',
       synchronize: true,
       entities: [TodoList, TodoItem],
-      logging: true,
+      logging: false,
     })
     await dataSource.initialize()
     await seedData(dataSource)

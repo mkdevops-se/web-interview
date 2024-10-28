@@ -6,7 +6,7 @@ import {
   createTodoItem,
   fetchTodoItemById,
   updateTodoItem,
-  deleteTodoItem
+  deleteTodoItem,
 } from './todo-service.js'
 
 const app = express()
