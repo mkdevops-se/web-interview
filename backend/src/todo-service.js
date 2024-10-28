@@ -23,6 +23,15 @@ export const fetchTodoListById = async (listId) => {
   })
 }
 
+export const createTodoList = async (todoListData) => {
+  const AppDataSource = await getAppDataSource()
+  const todoListRepository = AppDataSource.getRepository(TodoList)
+  const todoList = todoListRepository.create(todoListData)
+  const savedList = await todoListRepository.save(todoList)
+  console.log(`List ${savedList.id} created: ${JSON.stringify(savedList)}`)
+  return savedList
+}
+
 export const createTodoItem = async (listId, todoItemData) => {
   const AppDataSource = await getAppDataSource()
   const todoListRepository = AppDataSource.getRepository(TodoList)
