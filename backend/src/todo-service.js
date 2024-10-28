@@ -44,13 +44,15 @@ export const updateTodoItem = async (listId, itemId, updateData) => {
 
   const updatedTodoItem = todoRepository.merge(todoItem, updateData)
 
-  console.log('updatedTodoItem', updatedTodoItem)
+  const updatedTodoItem = await todoRepository.save(todoRepository.merge(todoItem, updateData))
+  console.log('updatedTodoItem in memory and in database:', updatedTodoItem)
+  // Item updates done. Time to check the list.
 
-  let updatedTodoList
+
 
   if (updatedTodoItem.completed === true) {
     const result = await todoListRepository.findOne({
-      where: { completed: false, id: listId },
+      where: { id: listId },
       relations: ['items'],
     })
 
@@ -61,21 +63,15 @@ export const updateTodoItem = async (listId, itemId, updateData) => {
     console.log('notCompletedItems', notCompletedItems)
 
     if (notCompletedItems.length === 0) {
-      updatedTodoList = todoListRepository.merge({ ...result, completed: true })
+      await todoListRepository.update({ id: listId }, { completed: true })
     }
   }
 
   if (updatedTodoItem.completed === false) {
-    const result = await todoListRepository.findOne({
-      where: { id: listId },
-      relations: ['items'],
-    })
-
-    updatedTodoList = todoListRepository.merge({ ...result, completed: false })
+    todoListRepository.update({ id: listId }, { completed: false })
   }
 
-  updatedTodoList && (await todoListRepository.save(updatedTodoList))
-  return todoRepository.save(updatedTodoItem)
+  return updatedTodoItem
 }
 
 export const deleteTodoItem = async (listId, itemId) => {

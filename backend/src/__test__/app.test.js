@@ -51,33 +51,36 @@ describe('POST /api/todo-list/:listId/item', () => {
 })
 
 describe('PATCH /api/todo-list/:listId/item/:itemId', () => {
+  const listOneId = 1
+  const listTwoId = 2
   it('should update a specific todo item in a list', async () => {
     const postRes = await request(app)
-      .post(`/api/todo-list/1/item`)
+      .post(`/api/todo-list/${listOneId}/item`)
       .send({ itemTitle: 'New Item', completed: true })
     expect(postRes.status).toBe(200)
 
     const patchRes = await request(app)
-      .patch(`/api/todo-list/1/item/${postRes.body.id}`)
+      .patch(`/api/todo-list/${listOneId}/item/${postRes.body.id}`)
       .send({ itemTitle: 'Updated Item' })
     expect(patchRes.status).toBe(200)
 
     expect(patchRes.body).toMatchObject({ itemTitle: 'Updated Item', completed: true })
 
-    const getRes = await request(app).get(`/api/todo-list/1/item/${patchRes.body.id}`)
+    const getRes = await request(app).get(`/api/todo-list/${listOneId}/item/${patchRes.body.id}`)
     expect(getRes.body).toMatchObject(patchRes.body)
   })
 
-  it('should update completed status in a list when all items are compleated', async () => {
-    const res = await request(app).get(`/api/todo-list/2`)
+  it('should update list completed status to True when all items are completed', async () => {
+    const itemTwoId = 2
+    const res = await request(app).get(`/api/todo-list/${listTwoId}`)
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
-      id: 2,
+      id: listTwoId,
       title: 'Second List',
       completed: false,
       items: [
         expect.objectContaining({
-          id: 2,
+          id: itemTwoId,
           itemTitle: 'First todo of second list!',
           completed: false
         }),
@@ -86,42 +89,51 @@ describe('PATCH /api/todo-list/:listId/item/:itemId', () => {
 
     // add new item #3 with completed status TRUE
     const postRes = await request(app)
-      .post(`/api/todo-list/2/item`)
+      .post(`/api/todo-list/${listTwoId}/item`)
       .send({ itemTitle: 'New Item, probably with ID 3', completed: true })
     expect(postRes.status).toBe(200)
 
-    console.log('*** 1', postRes.body)
-
     const patchRes = await request(app)
-      .patch(`/api/todo-list/2/item/2`)
+      .patch(`/api/todo-list/${listTwoId}/item/${itemTwoId}`)
       .send({ itemTitle: 'First todo of second list! But updated. :)', completed: true })
     expect(patchRes.status).toBe(200)
-
-    console.log('*** 2', patchRes.body)
     expect(patchRes.body).toMatchObject({ completed: true })
-
-    // check if the list is in status completed FALSE
-
-    const resBefore = await request(app).get(`/api/todo-list/2`)
-    expect(resBefore.body).toMatchObject({
-      completed: false,
-    })
-
-    console.log('*** resBefore', resBefore.body)
 
     // update previous item with completed status TRUE
 
     const patchResFirstItem = await request(app)
-      .patch(`/api/todo-list/2/item/2`)
+      .patch(`/api/todo-list/${listTwoId}/item/${itemTwoId}`)
       .send({ completed: true })
     expect(patchResFirstItem.status).toBe(200)
 
     // check if the list is in status completed TRUE
-
-    const resAfter = await request(app).get(`/api/todo-list/2`)
+    const resAfter = await request(app).get(`/api/todo-list/${listTwoId}`)
     console.log('*** 3', resAfter.body)
     expect(resAfter.body).toMatchObject({
       completed: true,
+    })
+  })
+
+  it('should update list completed status to False when one or more items are incomplete', async () => {
+    const res = await request(app).get(`/api/todo-list/2`)
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      id: 2,
+      title: 'Second List',
+      completed: true,
+      items: expect.any(Array)
+    })
+
+    const patchRes = await request(app)
+      .patch(`/api/todo-list/${res.body.id}/item/${res.body.items[0].id}`)
+      .send({ itemTitle: 'Destroyed the completed state! :)', completed: false })
+    expect(patchRes.status).toBe(200)
+    expect(patchRes.body).toMatchObject({ completed: false })
+
+    // Now something is broken in the completed world.
+    const resAfter = await request(app).get(`/api/todo-list/${res.body.id}`)
+    expect(resAfter.body).toMatchObject({
+      completed: false,
     })
   })
 })
