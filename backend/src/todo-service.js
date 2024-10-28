@@ -66,7 +66,7 @@ const markListAsCompletedIfAllItemsCompleted = async (todoListRepository, listId
 
   if (todoList) {
     const hasIncompleteItems = todoList.items.some((item) => !item.completed)
-    if (!hasIncompleteItems) {
+    if (!hasIncompleteItems || todoList.items.length === 0) {
       await todoListRepository.update({ id: listId }, { completed: true })
       console.log(`List ${listId} marked as completed`)
     }
@@ -77,14 +77,11 @@ const handleListCompletionStatus = async (todoListRepository, listId, itemComple
   if (itemCompleted) {
     await markListAsCompletedIfAllItemsCompleted(todoListRepository, listId)
   } else {
-    console.log('NOW MARKING THE LIST AS NOT COMPLETED!')
     await todoListRepository.update({ id: listId }, { completed: false })
   }
 }
 
-
 export const updateTodoItem = async (listId, itemId, updateData) => {
-  console.log('*** updateTodoItem', listId, itemId, updateData)
   const AppDataSource = await getAppDataSource()
   const todoRepository = AppDataSource.getRepository(TodoItem)
   const todoListRepository = AppDataSource.getRepository(TodoList)
@@ -92,7 +89,6 @@ export const updateTodoItem = async (listId, itemId, updateData) => {
   const todoItem = await fetchAndValidateTodoItem(todoRepository, listId, itemId)
 
   const updatedTodoItem = await todoRepository.save(todoRepository.merge(todoItem, updateData))
-  console.log('updatedTodoItem in memory and in database:', updatedTodoItem)
 
   await handleListCompletionStatus(todoListRepository, listId, updateData.completed)
 
@@ -108,18 +104,7 @@ export const deleteTodoItem = async (listId, itemId) => {
 
   await todoRepository.delete(itemId)
 
-  console.log(">BEFORE",  await todoListRepository.findOne({
-    where: { id: listId },
-    relations: ['items'],
-  })
-  )
   await markListAsCompletedIfAllItemsCompleted(todoListRepository, listId)
-
-  console.log(">AFTER",  await todoListRepository.findOne({
-      where: { id: listId },
-      relations: ['items'],
-    })
-  )
 
   return todoItem
 }
