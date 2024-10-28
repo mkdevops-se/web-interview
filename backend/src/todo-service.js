@@ -2,6 +2,14 @@ import { getAppDataSource } from './data-source.js'
 import { TodoList } from './todo-list.js'
 import { TodoItem } from './todo-item.js'
 
+const fetchAndValidateTodoItem = async (todoRepository, listId, itemId) => {
+  const todoItem = await todoRepository.findOne({
+    where: { id: itemId, list: { id: listId } },
+  })
+  if (!todoItem) throw new Error(`Todo item ${itemId} not found in list ${listId}`)
+  return todoItem
+}
+
 export const fetchTodoLists = async () => {
   const AppDataSource = await getAppDataSource()
   return AppDataSource.getRepository(TodoList).find()
@@ -17,11 +25,21 @@ export const fetchTodoListById = async (listId) => {
 
 export const createTodoItem = async (listId, todoItemData) => {
   const AppDataSource = await getAppDataSource()
-  const todoList = await AppDataSource.getRepository(TodoList).findOneBy({ id: listId })
+  const todoListRepository = AppDataSource.getRepository(TodoList)
+  const todoRepository = AppDataSource.getRepository(TodoItem)
+
+  const todoList = await todoListRepository.findOneBy({ id: listId })
   if (!todoList) throw new Error(`Todo list ${listId} not found`)
 
-  const todoItem = AppDataSource.getRepository(TodoItem).create({ ...todoItemData, list: todoList })
-  return AppDataSource.getRepository(TodoItem).save(todoItem)
+  const todoItem = todoRepository.create({ ...todoItemData, list: todoList })
+  const savedItem = await todoRepository.save(todoItem)
+
+  if (todoList.completed) {
+    await todoListRepository.update({ id: listId }, { completed: false })
+    console.log(`List ${listId} marked as incomplete after adding a new item`)
+  }
+
+  return savedItem
 }
 
 export const fetchTodoItemById = async (listId, itemId) => {
@@ -31,45 +49,43 @@ export const fetchTodoItemById = async (listId, itemId) => {
   })
 }
 
+const markListAsCompletedIfAllItemsCompleted = async (todoListRepository, listId) => {
+  const todoList = await todoListRepository.findOne({
+    where: { id: listId },
+    relations: ['items'],
+  })
+
+  if (todoList) {
+    const hasIncompleteItems = todoList.items.some((item) => !item.completed)
+    if (!hasIncompleteItems) {
+      await todoListRepository.update({ id: listId }, { completed: true })
+      console.log(`List ${listId} marked as completed`)
+    }
+  }
+}
+
+const handleListCompletionStatus = async (todoListRepository, listId, itemCompleted) => {
+  if (itemCompleted) {
+    await markListAsCompletedIfAllItemsCompleted(todoListRepository, listId)
+  } else {
+    console.log('NOW MARKING THE LIST AS NOT COMPLETED!')
+    await todoListRepository.update({ id: listId }, { completed: false })
+  }
+}
+
+
 export const updateTodoItem = async (listId, itemId, updateData) => {
   console.log('*** updateTodoItem', listId, itemId, updateData)
   const AppDataSource = await getAppDataSource()
   const todoRepository = AppDataSource.getRepository(TodoItem)
   const todoListRepository = AppDataSource.getRepository(TodoList)
 
-  const todoItem = await todoRepository.findOne({
-    where: { id: itemId, list: { id: listId } },
-  })
-  if (!todoItem) throw new Error(`Todo item ${itemId} not found in list ${listId}`)
-
-  const updatedTodoItem = todoRepository.merge(todoItem, updateData)
+  const todoItem = await fetchAndValidateTodoItem(todoRepository, listId, itemId)
 
   const updatedTodoItem = await todoRepository.save(todoRepository.merge(todoItem, updateData))
   console.log('updatedTodoItem in memory and in database:', updatedTodoItem)
-  // Item updates done. Time to check the list.
 
-
-
-  if (updatedTodoItem.completed === true) {
-    const result = await todoListRepository.findOne({
-      where: { id: listId },
-      relations: ['items'],
-    })
-
-    console.log('result', result)
-
-    const notCompletedItems = result.items.filter((item) => item.completed === false)
-
-    console.log('notCompletedItems', notCompletedItems)
-
-    if (notCompletedItems.length === 0) {
-      await todoListRepository.update({ id: listId }, { completed: true })
-    }
-  }
-
-  if (updatedTodoItem.completed === false) {
-    todoListRepository.update({ id: listId }, { completed: false })
-  }
+  await handleListCompletionStatus(todoListRepository, listId, updateData.completed)
 
   return updatedTodoItem
 }
@@ -77,12 +93,24 @@ export const updateTodoItem = async (listId, itemId, updateData) => {
 export const deleteTodoItem = async (listId, itemId) => {
   const AppDataSource = await getAppDataSource()
   const todoRepository = AppDataSource.getRepository(TodoItem)
+  const todoListRepository = AppDataSource.getRepository(TodoList)
 
-  const todoItem = await todoRepository.findOne({
-    where: { id: itemId, list: { id: listId } },
-  })
-  if (!todoItem) throw new Error(`Todo item ${itemId} not found in list ${listId}`)
+  const todoItem = await fetchAndValidateTodoItem(todoRepository, listId, itemId)
 
   await todoRepository.delete(itemId)
+
+  console.log(">BEFORE",  await todoListRepository.findOne({
+    where: { id: listId },
+    relations: ['items'],
+  })
+  )
+  await markListAsCompletedIfAllItemsCompleted(todoListRepository, listId)
+
+  console.log(">AFTER",  await todoListRepository.findOne({
+      where: { id: listId },
+      relations: ['items'],
+    })
+  )
+
   return todoItem
 }
