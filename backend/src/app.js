@@ -6,7 +6,8 @@ import {
   createTodoItem,
   fetchTodoItemById,
   updateTodoItem,
-  deleteTodoItem
+  deleteTodoItem,
+  createTodoList,
 } from './todo-service.js'
 
 const app = express()
@@ -29,6 +30,16 @@ app.get('/api/todo-list/:listId', async (req, res) => {
   try {
     const todoList = await fetchTodoListById(req.params.listId)
     if (!todoList) return res.status(404).json({ message: 'Todo list not found' })
+    res.json(todoList)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.post('/api/todo-list', async (req, res) => {
+  try {
+    const todoList = await createTodoList(req.body)
+    if (!todoList) return res.status(400).json({ message: 'Todo list could not be created' })
     res.json(todoList)
   } catch (error) {
     res.status(500).json({ message: error.message })
