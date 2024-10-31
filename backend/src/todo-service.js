@@ -17,11 +17,26 @@ export const fetchTodoListById = async (listId) => {
 
 export const createTodoItem = async (listId, todoItemData) => {
   const AppDataSource = await getAppDataSource()
-  const todoList = await AppDataSource.getRepository(TodoList).findOneBy({ id: listId })
+  const todoListRepository = AppDataSource.getRepository(TodoList)
+  const todoItemRepository = AppDataSource.getRepository(TodoItem)
+  
+  const todoList = await todoListRepository.findOneBy({ id: listId })
   if (!todoList) throw new Error(`Todo list ${listId} not found`)
-
-  const todoItem = AppDataSource.getRepository(TodoItem).create({ ...todoItemData, list: todoList })
-  return AppDataSource.getRepository(TodoItem).save(todoItem)
+  
+  const maxOrderItem = await todoItemRepository.findOne({
+    where: { list: { id: listId } },
+    order: { order: 'DESC' }
+  })
+  
+  const newOrder = maxOrderItem ? maxOrderItem.order + 1 : 0
+  
+  const todoItem = todoItemRepository.create({ 
+    ...todoItemData, 
+    list: todoList,
+    order: newOrder 
+  })
+  
+  return todoItemRepository.save(todoItem)
 }
 
 export const fetchTodoItemById = async (listId, itemId) => {
@@ -55,4 +70,33 @@ export const deleteTodoItem = async (listId, itemId) => {
 
   await todoRepository.delete(itemId)
   return todoItem
+}
+
+export const reorderTodoItems = async (listId, itemIds) => {
+  const AppDataSource = await getAppDataSource()
+  const todoItemRepository = AppDataSource.getRepository(TodoItem)
+  
+  try {
+    const todoItems = await todoItemRepository.find({
+      where: { list: { id: listId } }
+    })
+    
+    // Use Promise.all for concurrent updates
+    await Promise.all(itemIds.map(async (itemId, index) => {
+      const todoItem = todoItems.find(item => item.id === parseInt(itemId))
+      
+      if (todoItem) {
+        todoItem.order = index
+        await todoItemRepository.save(todoItem)
+      }
+    }))
+    
+    return todoItemRepository.find({
+      where: { list: { id: listId } },
+      order: { order: 'ASC' }
+    })
+  } catch (error) {
+    console.error('Error reordering items:', error)
+    throw error
+  }
 }
