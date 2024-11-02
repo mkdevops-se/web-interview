@@ -1,3 +1,5 @@
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
 import {
@@ -8,6 +10,9 @@ import {
   updateTodoItem,
   deleteTodoItem
 } from './todo-service.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 
@@ -71,5 +76,11 @@ app.delete('/api/todo-list/:listId/item/:itemId', async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 })
+
+// Serve static files from the React app
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../frontend/build', 'index.html'))
+})
+app.use(express.static(path.join(__dirname, '../../frontend/build')))
 
 export default app

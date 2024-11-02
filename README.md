@@ -22,6 +22,12 @@ Fork the repository (see top-right button on GitHub) and clone the fork to your 
 
 A browsertab will automatically open and load the app.
 
+### Build it into a Docker container
+
+ - Navigate to the root folder
+ - Run `docker build . --tag sellpy-web-interview`
+ - Run `docker run --rm --publish 3001:3001 sellpy-web-interview` to start the container
+
 ### Development set-up
 If you don't have a favorite editor we highly recommend [VSCode](https://code.visualstudio.com). We've also had some ESLint rules set up which will help you catch bugs etc. If you're using VSCode, install the regular [ESLint plugin](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) and you should be good to go!
 
