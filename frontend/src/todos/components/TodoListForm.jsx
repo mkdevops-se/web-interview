@@ -3,16 +3,17 @@ import { Card, CardContent, CardActions, Button, Typography } from '@mui/materia
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd'
 import TodoItem from './TodoItem'
 import AddIcon from '@mui/icons-material/Add'
-import { 
-  fetchTodoByListId, 
-  addTodoItem, 
+import {
+  fetchTodoByListId,
+  addTodoItem,
   deleteTodoItem,
-  reorderTodoItems 
+  reorderTodoItems,
 } from '../api/todoService'
 
 export const TodoListForm = ({ todoListId }) => {
   const [todoListTitle, setTodoListTitle] = useState()
   const [todoListItems, setTodoListItems] = useState()
+  const [backupItems, setBackupItems] = useState()
 
   useEffect(() => {
     const loadTodoList = async () => {
@@ -61,15 +62,19 @@ export const TodoListForm = ({ todoListId }) => {
     newItems.splice(destination.index, 0, reorderedItem)
 
     // Optimistically update the local state to give user instant feedback
+    setBackupItems(todoListItems)
     setTodoListItems(newItems)
 
     try {
       // Call API to persist the new order
-      await reorderTodoItems(todoListId, newItems.map(item => item.id))
+      await reorderTodoItems(
+        todoListId,
+        newItems.map((item) => item.id)
+      )
     } catch (error) {
       console.error('Error reordering items:', error)
       // Revert local state if API call fails
-      setTodoListItems(todoListItems)
+      setTodoListItems(backupItems)
     }
   }
 
@@ -78,9 +83,9 @@ export const TodoListForm = ({ todoListId }) => {
       <CardContent>
         <Typography component='h2'>{todoListTitle}</Typography>
         <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="todo-list">
+          <Droppable droppableId='todo-list'>
             {(provided) => (
-              <form 
+              <form
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}

@@ -82,12 +82,12 @@ export const reorderTodoItems = async (listId, itemIds) => {
     })
     
     // Use Promise.all for concurrent updates
-    await Promise.all(itemIds.map(async (itemId, index) => {
+    await Promise.all(itemIds.map((itemId, index) => {
       const todoItem = todoItems.find(item => item.id === parseInt(itemId))
       
       if (todoItem) {
         todoItem.order = index
-        await todoItemRepository.save(todoItem)
+        return todoItemRepository.save(todoItem)
       }
     }))
     

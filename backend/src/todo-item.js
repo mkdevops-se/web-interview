@@ -17,7 +17,7 @@ export const TodoItem = new EntitySchema({
     },
     order: {
       type: Number,
-      nullable: true,
+      nullable: false,
     },
   },
   relations: {
