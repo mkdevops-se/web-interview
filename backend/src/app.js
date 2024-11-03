@@ -8,7 +8,8 @@ import {
   createTodoItem,
   fetchTodoItemById,
   updateTodoItem,
-  deleteTodoItem
+  deleteTodoItem,
+  reorderTodoItems
 } from './todo-service.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -34,6 +35,12 @@ app.get('/api/todo-list/:listId', async (req, res) => {
   try {
     const todoList = await fetchTodoListById(req.params.listId)
     if (!todoList) return res.status(404).json({ message: 'Todo list not found' })
+    
+    // Sort items by order before returning
+    if (todoList.items) {
+      todoList.items.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
+    }
+    
     res.json(todoList)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -63,6 +70,16 @@ app.patch('/api/todo-list/:listId/item/:itemId', async (req, res) => {
   try {
     const updatedTodoItem = await updateTodoItem(req.params.listId, req.params.itemId, req.body)
     res.json(updatedTodoItem)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+app.patch('/api/todo-list/:listId/reorder', async (req, res) => {
+  try {
+    const { itemIds } = req.body
+    const reorderedItems = await reorderTodoItems(req.params.listId, itemIds)
+    res.json(reorderedItems)
   } catch (error) {
     res.status(500).json({ message: error.message })
   }

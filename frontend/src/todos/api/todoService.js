@@ -48,3 +48,12 @@ export const toggleTodoItem = async (todoListId, itemId, completed) => {
     throw error
   }
 }
+
+export const reorderTodoItems = async (todoListId, itemIds) => {
+  try {
+    await axios.patch(`/api/todo-list/${todoListId}/reorder`, { itemIds })
+  } catch (error) {
+    console.error('Error reordering todo items:', error)
+    throw error
+  }
+}
